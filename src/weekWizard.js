@@ -1,10 +1,7 @@
 // weekWizard.js — day-by-day week planning wizard
 
-import { addDays, toDateString, toTimeString, isSameDay, formatDayLabel } from './utils.js';
+import { addDays, toDateString, toTimeString, isSameDay, formatDayLabel, showToast } from './utils.js';
 import { getMeals } from './mealLibrary.js';
-import { store } from './store.js';
-import { isSignedIn } from './auth.js';
-import { createEvent } from './calendar.js';
 
 const DAY_NAMES_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const NOTES_KEY = 'planify_wizard_notes'; // { 'YYYY-MM-DD': 'note text' }
@@ -14,7 +11,8 @@ let _currentDay   = 0;     // 0-6
 let _allEvents    = [];    // all fetched events for the week
 let _mealEvents   = [];    // all fetched meal events for the week
 let _dayMeals     = {};    // { 0: { breakfast: {...}, lunch: {...}, dinner: {...} } } — pending saves
-let _onSaveMeal   = null;  // callback(date, slot, name, notes) → Promise
+let _onSaveMeal   = null;  // callback(date, slot, name, notes, existingEvent) → Promise<savedEvent>
+let _onRemoveMeal = null;  // callback(existingEvent) → Promise
 let _onAddEvent   = null;  // callback(date, hour)
 let _onDone       = null;  // callback — wizard closed, refresh week
 
@@ -22,10 +20,11 @@ let _onDone       = null;  // callback — wizard closed, refresh week
 const wizOverlay  = () => document.getElementById('wizard-overlay');
 const pickerOverlay = () => document.getElementById('wizard-meal-picker-overlay');
 
-export function initWizard({ onSaveMeal, onAddEvent, onDone }) {
-  _onSaveMeal = onSaveMeal;
-  _onAddEvent = onAddEvent;
-  _onDone     = onDone;
+export function initWizard({ onSaveMeal, onRemoveMeal, onAddEvent, onDone }) {
+  _onSaveMeal    = onSaveMeal;
+  _onRemoveMeal  = onRemoveMeal;
+  _onAddEvent    = onAddEvent;
+  _onDone        = onDone;
 
   document.getElementById('btn-close-wizard').addEventListener('click', closeWizard);
   wizOverlay().addEventListener('click', (e) => { if (e.target === wizOverlay()) closeWizard(); });
@@ -37,15 +36,11 @@ export function initWizard({ onSaveMeal, onAddEvent, onDone }) {
     if (_onAddEvent) _onAddEvent(date, 9);
   });
 
-  // Meal slot add buttons
-  document.querySelectorAll('.wizard-meal-add-btn').forEach(btn => {
-    btn.addEventListener('click', () => openMealPicker(btn.dataset.slot));
-  });
-
   // Meal picker modal
   document.getElementById('wizard-meal-picker-close').addEventListener('click',  closeMealPicker);
   document.getElementById('wizard-meal-picker-cancel').addEventListener('click', closeMealPicker);
   document.getElementById('wizard-meal-picker-save').addEventListener('click',   saveMealPicker);
+  document.getElementById('wizard-meal-picker-remove').addEventListener('click', removeMealPicker);
   pickerOverlay().addEventListener('click', (e) => { if (e.target === pickerOverlay()) closeMealPicker(); });
 
   // Autocomplete in picker
@@ -93,24 +88,6 @@ export function openWizard(monday, allEvents, mealEvents) {
 export function closeWizard() {
   wizOverlay().classList.add('hidden');
   if (_onDone) _onDone();
-}
-
-/** Call this from app.js after an event was saved inside the wizard */
-export function refreshWizardDay(allEvents, mealEvents) {
-  _allEvents  = allEvents;
-  _mealEvents = mealEvents;
-  // re-sync meal data
-  for (let i = 0; i < 7; i++) {
-    const date = toDateString(addDays(_monday, i));
-    mealEvents.forEach(m => {
-      const mDate = m.start?.date || m.start?.dateTime?.slice(0, 10);
-      if (mDate === date) {
-        const slot = m.extendedProperties?.private?.meal_slot;
-        if (slot) _dayMeals[i][slot] = { name: m.summary, notes: m.description || '', id: m.id, _event: m };
-      }
-    });
-  }
-  _renderDay(_currentDay);
 }
 
 // ---- Navigation ----
@@ -262,7 +239,7 @@ function _buildDots() {
 
 // ---- Meal picker ----
 
-let _pickerSlot    = null;
+let _pickerSlot     = null;
 let _pickerExisting = null;
 
 function openMealPicker(slot, existing = null) {
@@ -270,12 +247,19 @@ function openMealPicker(slot, existing = null) {
   _pickerExisting = existing;
 
   const slotLabel = slot.charAt(0).toUpperCase() + slot.slice(1);
+  const isEdit    = !!existing;
+
   document.getElementById('wizard-meal-picker-title').textContent =
-    existing ? `Edit ${slotLabel}` : `Add ${slotLabel}`;
+    isEdit ? `Edit ${slotLabel}` : `Add ${slotLabel}`;
   document.getElementById('wizard-meal-picker-input').value  = existing?.name  || '';
   document.getElementById('wizard-meal-picker-notes').value  = existing?.notes || '';
   document.getElementById('wizard-meal-picker-ac').innerHTML = '';
   document.getElementById('wizard-meal-picker-ac').classList.add('hidden');
+
+  // Show Remove button only when editing an already-saved meal
+  const removeBtn = document.getElementById('wizard-meal-picker-remove');
+  removeBtn.classList.toggle('hidden', !isEdit);
+
   pickerOverlay().classList.remove('hidden');
   document.getElementById('wizard-meal-picker-input').focus();
 }
@@ -294,18 +278,54 @@ async function saveMealPicker() {
     return;
   }
 
-  const date = toDateString(addDays(_monday, _currentDay));
+  const saveBtn = document.getElementById('wizard-meal-picker-save');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving…';
 
-  if (!_dayMeals[_currentDay]) _dayMeals[_currentDay] = {};
-  _dayMeals[_currentDay][_pickerSlot] = { name, notes };
+  const date          = toDateString(addDays(_monday, _currentDay));
+  const slot          = _pickerSlot;
+  const existingEvent = _pickerExisting?._event || null;
 
-  // Persist to calendar if signed in
-  if (_onSaveMeal) {
-    await _onSaveMeal(date, _pickerSlot, name, notes, _pickerExisting?._event || null);
+  try {
+    let savedEvent = null;
+    if (_onSaveMeal) {
+      savedEvent = await _onSaveMeal(date, slot, name, notes, existingEvent);
+    }
+    if (!_dayMeals[_currentDay]) _dayMeals[_currentDay] = {};
+    // Store the returned event so future edits use updateEvent correctly
+    _dayMeals[_currentDay][slot] = { name, notes, _event: savedEvent || null };
+    closeMealPicker();
+    _renderWizardMeals(_currentDay);
+  } catch (e) {
+    showToast(`Meal save failed: ${e.message}`, 'error');
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save';
   }
+}
 
-  closeMealPicker();
-  _renderWizardMeals(_currentDay);
+async function removeMealPicker() {
+  const slot     = _pickerSlot;
+  const existing = _pickerExisting;
+  if (!existing) return;
+
+  const removeBtn = document.getElementById('wizard-meal-picker-remove');
+  removeBtn.disabled = true;
+  removeBtn.textContent = 'Removing…';
+
+  try {
+    if (_onRemoveMeal && existing._event) {
+      await _onRemoveMeal(existing._event);
+    }
+    if (_dayMeals[_currentDay]) delete _dayMeals[_currentDay][slot];
+    closeMealPicker();
+    _renderWizardMeals(_currentDay);
+  } catch (e) {
+    showToast(`Remove failed: ${e.message}`, 'error');
+  } finally {
+    removeBtn.disabled = false;
+    removeBtn.textContent = 'Remove meal';
+  }
 }
 
 // ---- Autocomplete ----

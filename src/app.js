@@ -8,9 +8,9 @@ import { initEventModal, openNewEventModal, openEditEventModal } from './eventMo
 import { initMealPlanner, openNewMealModal, openEditMealModal, listMealEvents, resetMealCalendarId, _getMealCalendarId } from './mealPlanner.js';
 import { initSettings, openSettings } from './settings.js';
 import { loadLibrary } from './mealLibrary.js';
-import { initWizard, openWizard, refreshWizardDay } from './weekWizard.js';
+import { initWizard, openWizard } from './weekWizard.js';
 import { startOfWeek, addDays, toDateString, showToast } from './utils.js';
-import { createEvent, updateEvent } from './calendar.js';
+import { createEvent, updateEvent, deleteEvent } from './calendar.js';
 
 // ---- State ----
 let weekOffset   = store.getWeekOffset();
@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Wizard
   initWizard({
     onSaveMeal: onWizardSaveMeal,
+    onRemoveMeal: onWizardRemoveMeal,
     onAddEvent: (date, hour) => openNewEventModal(date, hour),
     onDone: refreshWeek,
   });
@@ -182,8 +183,12 @@ function onPlanWeekClick() {
   openWizard(getCurrentMonday(), allEvents, mealEvents);
 }
 
+/**
+ * Save a meal from the wizard. Returns the saved event object (so the wizard
+ * can store the _event reference and correctly update/delete later).
+ * Throws on API failure — the wizard catches and shows the error.
+ */
 async function onWizardSaveMeal(date, slot, name, notes, existingEvent) {
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const eventBody = {
     summary: name,
     description: notes || undefined,
@@ -193,25 +198,21 @@ async function onWizardSaveMeal(date, slot, name, notes, existingEvent) {
       private: { planify_type: 'meal', meal_slot: slot },
     },
   };
-  try {
-    const calId = await _getMealCalendarId();
-    if (existingEvent) {
-      await updateEvent(calId, existingEvent.id, eventBody);
-    } else {
-      await createEvent(calId, eventBody);
-    }
-    // Refresh data and update wizard without closing it
-    const monday = getCurrentMonday();
-    const sunday = addDays(monday, 6);
-    sunday.setHours(23, 59, 59, 999);
-    const timeMin = monday.toISOString();
-    const timeMax = sunday.toISOString();
-    mealEvents = await listMealEvents(timeMin, timeMax);
-    refreshWizardDay(allEvents, mealEvents);
-    renderCurrentWeek();
-  } catch (e) {
-    showToast(`Meal save failed: ${e.message}`, 'error');
-  }
+  const calId = await _getMealCalendarId();
+  const saved = existingEvent
+    ? await updateEvent(calId, existingEvent.id, eventBody)
+    : await createEvent(calId, eventBody);
+
+  // Background refresh — don't block the wizard
+  refreshWeek().catch(() => {});
+  return saved;
+}
+
+async function onWizardRemoveMeal(existingEvent) {
+  if (!existingEvent?.id) return;
+  const calId = await _getMealCalendarId();
+  await deleteEvent(calId, existingEvent.id);
+  refreshWeek().catch(() => {});
 }
 
 // ---- Event/meal saved callbacks ----
