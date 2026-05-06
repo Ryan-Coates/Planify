@@ -1,0 +1,123 @@
+/* ===================================================
+   Planify — modal.css
+   Modal overlays and shared form styles
+   =================================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: overlay-in .15s ease;
+}
+@keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modal-in .18s ease;
+}
+.modal-sm { max-width: 360px; }
+@keyframes modal-in { from { opacity: 0; transform: scale(.96) translateY(8px); } to { opacity: 1; transform: none; } }
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.modal-header h2 { font-size: .95rem; font-weight: 600; }
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.modal-footer-right { display: flex; align-items: center; gap: 8px; }
+
+/* ---------- Form fields ---------- */
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: .82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  position: relative;
+}
+
+.field-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: .875rem;
+  outline: none;
+  transition: border-color var(--transition);
+}
+.field-input:focus { border-color: var(--color-primary); }
+textarea.field-input { resize: vertical; min-height: 60px; }
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+/* ---------- Autocomplete ---------- */
+.autocomplete-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 400;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  list-style: none;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 2px;
+}
+.autocomplete-list li {
+  padding: 8px 12px;
+  font-size: .875rem;
+  cursor: pointer;
+  transition: background var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.autocomplete-list li:hover,
+.autocomplete-list li.active { background: var(--color-primary-light); color: var(--color-primary); }
+.autocomplete-slot { font-size: .75rem; color: var(--text-muted); }

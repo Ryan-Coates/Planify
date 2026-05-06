@@ -1,0 +1,244 @@
+/* ===================================================
+   Planify — week.css
+   7-column week grid + meal rows + event blocks
+   =================================================== */
+
+/* ---------- Overall week container ---------- */
+.week-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--toolbar-height));
+  overflow: hidden;
+  background: var(--bg-surface);
+}
+
+/* ---------- Day header row ---------- */
+.week-header {
+  display: grid;
+  grid-template-columns: 52px repeat(7, 1fr);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.week-header-gutter { /* left spacer above time labels */ }
+.day-header {
+  padding: 10px 6px 8px;
+  text-align: center;
+  border-left: 1px solid var(--border);
+  cursor: default;
+  user-select: none;
+}
+.day-header .day-name {
+  font-size: .72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+}
+.day-header .day-num {
+  width: 30px;
+  height: 30px;
+  margin: 4px auto 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .95rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.day-header.is-today .day-num {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* ---------- Meal row ---------- */
+.meal-row {
+  display: grid;
+  grid-template-columns: 52px repeat(7, 1fr);
+  border-bottom: 2px solid var(--border);
+  background: var(--bg-surface-2);
+  min-height: 72px;
+}
+.meal-row-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  padding: 4px 6px 4px 8px;
+  font-size: .68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  border-right: 1px solid var(--border);
+}
+.meal-day-cell {
+  border-left: 1px solid var(--border);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.meal-day-cell.is-today { background: var(--color-today); }
+
+.meal-chip {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-size: .74rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.meal-chip:hover { background: var(--color-primary); color: #fff; }
+.meal-chip .meal-chip-slot {
+  font-size: .67rem;
+  opacity: .75;
+  text-transform: capitalize;
+}
+
+.meal-add-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px dashed var(--text-muted);
+  color: var(--text-muted);
+  font-size: .9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color var(--transition), color var(--transition);
+}
+.meal-add-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+/* ---------- Time grid scroll area ---------- */
+.time-grid-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.time-grid {
+  display: grid;
+  grid-template-columns: 52px repeat(7, 1fr);
+  position: relative;
+  /* height set by JS based on hour count */
+}
+
+/* ---------- Hour rows ---------- */
+.time-label {
+  font-size: .7rem;
+  color: var(--text-muted);
+  text-align: right;
+  padding-right: 6px;
+  line-height: 1;
+  transform: translateY(-7px);
+  height: var(--hour-height, 60px);
+  pointer-events: none;
+  user-select: none;
+}
+.hour-row {
+  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  height: var(--hour-height, 60px);
+  position: relative;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.hour-row:hover { background: var(--bg-hover); }
+.hour-row.is-today { background: var(--color-today); }
+.hour-row.is-today:hover { filter: brightness(.97); }
+
+/* Half-hour tick */
+.hour-row::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  border-top: 1px dashed var(--border);
+  opacity: .6;
+}
+
+/* ---------- Event blocks ---------- */
+.event-block {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+  font-size: .78rem;
+  font-weight: 500;
+  overflow: hidden;
+  cursor: pointer;
+  z-index: 5;
+  transition: filter var(--transition), box-shadow var(--transition);
+  box-shadow: var(--shadow-sm);
+  line-height: 1.3;
+}
+.event-block:hover { filter: brightness(.92); box-shadow: var(--shadow-md); }
+.event-block .event-time { font-size: .7rem; opacity: .8; display: block; }
+
+/* Colour map (Google Calendar colours) */
+.event-colour-1  { background: #c5cae9; color: #283593; }
+.event-colour-2  { background: #c8e6c9; color: #1b5e20; }
+.event-colour-3  { background: #e1bee7; color: #6a1b9a; }
+.event-colour-4  { background: #f8bbd0; color: #880e4f; }
+.event-colour-5  { background: #fff9c4; color: #827717; }
+.event-colour-6  { background: #ffe0b2; color: #bf360c; }
+.event-colour-7  { background: #b2ebf2; color: #006064; }
+.event-colour-8  { background: #cfd8dc; color: #263238; }
+.event-colour-9  { background: #bbdefb; color: #0d47a1; }
+.event-colour-10 { background: #dcedc8; color: #33691e; }
+.event-colour-11 { background: #ffccbc; color: #bf360c; }
+.event-colour-default { background: var(--color-primary-light); color: var(--color-primary); }
+
+body.theme-dark .event-colour-default { background: #2a2f5a; color: #9fa8da; }
+
+/* ---------- Current time indicator ---------- */
+.now-line {
+  position: absolute;
+  left: 52px;
+  right: 0;
+  height: 2px;
+  background: #f44336;
+  z-index: 8;
+  pointer-events: none;
+}
+.now-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f44336;
+}
+
+/* ---------- Responsive: mobile shows 1-day ---------- */
+@media (max-width: 640px) {
+  .week-header,
+  .meal-row,
+  .time-grid {
+    grid-template-columns: 40px 1fr;
+  }
+  .day-header:not(.mobile-visible),
+  .hour-row:not(.mobile-visible),
+  .meal-day-cell:not(.mobile-visible) {
+    display: none;
+  }
+}

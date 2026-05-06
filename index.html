@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self';
+             script-src 'self' https://accounts.google.com https://apis.google.com 'unsafe-inline';
+             connect-src 'self' https://www.googleapis.com https://accounts.google.com;
+             style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+             font-src https://fonts.gstatic.com;
+             img-src 'self' data: https://*.googleusercontent.com;" />
+  <title>Planify</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/week.css" />
+  <link rel="stylesheet" href="styles/modal.css" />
+  <link rel="stylesheet" href="styles/wizard.css" />
+</head>
+<body class="theme-light">
+
+  <!-- ===== TOOLBAR ===== -->
+  <header class="toolbar" role="banner">
+    <div class="toolbar-left">
+      <span class="app-logo">📅 Planify</span>
+    </div>
+    <div class="toolbar-center">
+      <button class="btn-icon" id="btn-prev-week" aria-label="Previous week">&#8249;</button>
+      <button class="btn-text" id="btn-today">Today</button>
+      <h1 class="week-label" id="week-label">Loading…</h1>
+      <button class="btn-icon" id="btn-next-week" aria-label="Next week">&#8250;</button>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn-icon" id="btn-theme" aria-label="Toggle theme" title="Toggle dark/light mode">☀</button>
+      <button class="btn-plan-week" id="btn-plan-week" title="Plan this week day by day">✨ Plan Week</button>
+      <button class="btn-icon" id="btn-settings" aria-label="Settings" title="Settings">⚙</button>
+      <div id="auth-area">
+        <button class="btn-primary" id="btn-signin">Sign in with Google</button>
+        <div id="user-info" class="user-info hidden">
+          <img id="user-avatar" src="" alt="User avatar" class="avatar" />
+          <span id="user-name"></span>
+          <button class="btn-text btn-small" id="btn-signout">Sign out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="app-main" role="main">
+
+    <!-- Week grid -->
+    <div class="week-container" id="week-container">
+      <!-- Rendered by weekView.js -->
+    </div>
+
+    <!-- FAB: add event -->
+    <button class="fab" id="btn-add-event" aria-label="Add event" title="Add event">+</button>
+
+  </main>
+
+  <!-- ===== SETTINGS PANEL ===== -->
+  <div class="settings-overlay hidden" id="settings-overlay" role="dialog" aria-modal="true" aria-label="Settings">
+    <div class="settings-panel">
+      <div class="settings-header">
+        <h2>Settings</h2>
+        <button class="btn-icon" id="btn-close-settings" aria-label="Close settings">✕</button>
+      </div>
+      <nav class="settings-tabs">
+        <button class="settings-tab active" data-tab="calendars">Calendars</button>
+        <button class="settings-tab" data-tab="meals">Meal Library</button>
+      </nav>
+
+      <!-- Calendars tab -->
+      <div class="settings-content" id="tab-calendars">
+        <p class="settings-hint">Sign in to manage calendars.</p>
+        <ul class="calendar-list" id="calendar-list"></ul>
+
+        <div class="settings-section-header">Shared / Extra Calendars</div>
+        <p class="settings-hint" style="margin-top:4px;">Pin calendars from your account to always show on the week view.</p>
+        <ul class="calendar-list" id="shared-calendar-list"></ul>
+        <div class="shared-cal-add-row" style="display:flex;gap:8px;margin-top:10px;align-items:flex-end;">
+          <label class="field-label" style="flex:1;">
+            Pick a calendar
+            <select id="shared-cal-select" class="field-input">
+              <option value="">— loading… —</option>
+            </select>
+          </label>
+          <button class="btn-primary btn-small" id="btn-add-shared-cal" style="margin-bottom:1px;">Add</button>
+        </div>
+      </div>
+
+      <!-- Meals tab -->
+      <div class="settings-content hidden" id="tab-meals">
+        <div class="meals-toolbar">
+          <button class="btn-primary btn-small" id="btn-add-meal-option">+ Add meal</button>
+        </div>
+        <table class="meal-library-table">
+          <thead>
+            <tr><th>Name</th><th>Slot</th><th>Tags</th><th></th></tr>
+          </thead>
+          <tbody id="meal-library-body"></tbody>
+        </table>
+        <p class="settings-hint" id="meal-library-empty">No saved meals yet. Click "+ Add meal" to create one.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== EVENT MODAL ===== -->
+  <div class="modal-overlay hidden" id="event-modal-overlay" role="dialog" aria-modal="true" aria-label="Event">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="event-modal-title">Add Event</h2>
+        <button class="btn-icon" id="btn-close-event-modal" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label">Title
+          <input type="text" id="event-title" class="field-input" placeholder="Event title" />
+        </label>
+        <div class="field-row">
+          <label class="field-label">Date
+            <input type="date" id="event-date" class="field-input" />
+          </label>
+          <label class="field-label">Start
+            <input type="time" id="event-start" class="field-input" value="09:00" />
+          </label>
+          <label class="field-label">End
+            <input type="time" id="event-end" class="field-input" value="10:00" />
+          </label>
+        </div>
+        <label class="field-label">Description
+          <textarea id="event-desc" class="field-input" rows="2" placeholder="Optional description"></textarea>
+        </label>
+        <label class="field-label">Calendar
+          <select id="event-calendar" class="field-input"></select>
+        </label>
+        <label class="field-label">Colour
+          <select id="event-colour" class="field-input">
+            <option value="">Default</option>
+            <option value="1">Lavender</option>
+            <option value="2">Sage</option>
+            <option value="3">Grape</option>
+            <option value="4">Flamingo</option>
+            <option value="5">Banana</option>
+            <option value="6">Tangerine</option>
+            <option value="7">Peacock</option>
+            <option value="8">Graphite</option>
+            <option value="9">Blueberry</option>
+            <option value="10">Basil</option>
+            <option value="11">Tomato</option>
+          </select>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-danger hidden" id="btn-delete-event">Delete</button>
+        <div class="modal-footer-right">
+          <button class="btn-text" id="btn-cancel-event">Cancel</button>
+          <button class="btn-primary" id="btn-save-event">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MEAL SLOT MODAL ===== -->
+  <div class="modal-overlay hidden" id="meal-modal-overlay" role="dialog" aria-modal="true" aria-label="Meal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 id="meal-modal-title">Add Meal</h2>
+        <button class="btn-icon" id="btn-close-meal-modal" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label">Meal name
+          <input type="text" id="meal-name" class="field-input" placeholder="e.g. Avocado toast" autocomplete="off" />
+          <ul class="autocomplete-list hidden" id="meal-autocomplete"></ul>
+        </label>
+        <label class="field-label">Slot
+          <select id="meal-slot" class="field-input">
+            <option value="breakfast">Breakfast</option>
+            <option value="lunch">Lunch</option>
+            <option value="dinner">Dinner</option>
+          </select>
+        </label>
+        <label class="field-label">Date
+          <input type="date" id="meal-date" class="field-input" />
+        </label>
+        <label class="field-label">Notes
+          <input type="text" id="meal-notes" class="field-input" placeholder="Optional notes" />
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-danger hidden" id="btn-delete-meal">Delete</button>
+        <div class="modal-footer-right">
+          <button class="btn-text" id="btn-cancel-meal">Cancel</button>
+          <button class="btn-primary" id="btn-save-meal">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MEAL OPTION MODAL ===== -->
+  <div class="modal-overlay hidden" id="meal-option-modal-overlay" role="dialog" aria-modal="true" aria-label="Meal option">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 id="meal-option-modal-title">Add Meal Option</h2>
+        <button class="btn-icon" id="btn-close-meal-option-modal" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label">Name
+          <input type="text" id="meal-option-name" class="field-input" placeholder="Meal name" />
+        </label>
+        <label class="field-label">Default slot
+          <select id="meal-option-slot" class="field-input">
+            <option value="breakfast">Breakfast</option>
+            <option value="lunch">Lunch</option>
+            <option value="dinner">Dinner</option>
+            <option value="any">Any</option>
+          </select>
+        </label>
+        <label class="field-label">Tags (comma-separated)
+          <input type="text" id="meal-option-tags" class="field-input" placeholder="e.g. vegetarian, quick" />
+        </label>
+        <label class="field-label">Notes
+          <input type="text" id="meal-option-notes" class="field-input" placeholder="Optional notes or ingredients" />
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-danger hidden" id="btn-delete-meal-option">Delete</button>
+        <div class="modal-footer-right">
+          <button class="btn-text" id="btn-cancel-meal-option">Cancel</button>
+          <button class="btn-primary" id="btn-save-meal-option">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FIRST-RUN SHARED CALENDAR MODAL ===== -->
+  <div class="modal-overlay hidden" id="first-run-overlay" role="dialog" aria-modal="true" aria-label="Setup">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>👋 Welcome to Planify</h2>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:.875rem;color:var(--text-secondary);margin-bottom:4px;">
+          Would you like to pin a shared calendar to your week view? You can change this any time in Settings.
+        </p>
+        <label class="field-label">Pick a calendar (optional)
+          <select id="first-run-cal-select" class="field-input">
+            <option value="">— None, skip —</option>
+          </select>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <div></div>
+        <div class="modal-footer-right">
+          <button class="btn-text" id="btn-first-run-skip">Skip</button>
+          <button class="btn-primary" id="btn-first-run-save">Continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <!-- ===== WEEK PLANNING WIZARD ===== -->
+  <div class="wizard-overlay hidden" id="wizard-overlay" role="dialog" aria-modal="true" aria-label="Plan your week">
+    <div class="wizard-panel">
+
+      <!-- Wizard header -->
+      <div class="wizard-header">
+        <div class="wizard-title-area">
+          <span class="wizard-label">Plan your week</span>
+          <h2 class="wizard-day-title" id="wizard-day-title">Monday</h2>
+          <span class="wizard-date-sub" id="wizard-date-sub"></span>
+        </div>
+        <button class="btn-icon" id="btn-close-wizard" aria-label="Close wizard">✕</button>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="wizard-progress">
+        <div class="wizard-progress-track">
+          <div class="wizard-progress-fill" id="wizard-progress-fill"></div>
+        </div>
+        <div class="wizard-day-dots" id="wizard-day-dots"></div>
+      </div>
+
+      <!-- Wizard body — scrollable -->
+      <div class="wizard-body" id="wizard-body">
+
+        <!-- Existing events for the day -->
+        <section class="wizard-section">
+          <div class="wizard-section-header">
+            <span>📆 Events</span>
+            <button class="btn-text btn-small" id="wizard-btn-add-event">+ Add event</button>
+          </div>
+          <div class="wizard-events-list" id="wizard-events-list">
+            <p class="wizard-empty" id="wizard-events-empty">No events — free day!</p>
+          </div>
+        </section>
+
+        <!-- Meals -->
+        <section class="wizard-section">
+          <div class="wizard-section-header"><span>🍽 Meals</span></div>
+          <div class="wizard-meal-slots" id="wizard-meal-slots">
+            <div class="wizard-meal-slot" data-slot="breakfast">
+              <div class="wizard-meal-slot-label">🌅 Breakfast</div>
+              <div class="wizard-meal-value" id="wizard-meal-breakfast">
+                <button class="wizard-meal-add-btn" data-slot="breakfast">+ Add</button>
+              </div>
+            </div>
+            <div class="wizard-meal-slot" data-slot="lunch">
+              <div class="wizard-meal-slot-label">☀️ Lunch</div>
+              <div class="wizard-meal-value" id="wizard-meal-lunch">
+                <button class="wizard-meal-add-btn" data-slot="lunch">+ Add</button>
+              </div>
+            </div>
+            <div class="wizard-meal-slot" data-slot="dinner">
+              <div class="wizard-meal-slot-label">🌙 Dinner</div>
+              <div class="wizard-meal-value" id="wizard-meal-dinner">
+                <button class="wizard-meal-add-btn" data-slot="dinner">+ Add</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Notes -->
+        <section class="wizard-section">
+          <div class="wizard-section-header"><span>📝 Day notes</span></div>
+          <textarea class="field-input wizard-notes" id="wizard-notes" rows="2" placeholder="Anything else for today…"></textarea>
+        </section>
+
+      </div>
+
+      <!-- Wizard footer nav -->
+      <div class="wizard-footer">
+        <button class="btn-text" id="wizard-btn-prev">← Prev</button>
+        <div class="wizard-step-indicator" id="wizard-step-indicator">Day 1 of 7</div>
+        <button class="btn-primary" id="wizard-btn-next">Next →</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Wizard inline meal picker (appears inside wizard) -->
+  <div class="modal-overlay hidden" id="wizard-meal-picker-overlay" role="dialog" aria-modal="true">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 id="wizard-meal-picker-title">Add Breakfast</h2>
+        <button class="btn-icon" id="wizard-meal-picker-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label">Meal
+          <input type="text" id="wizard-meal-picker-input" class="field-input" placeholder="Type or pick from library…" autocomplete="off" />
+          <ul class="autocomplete-list hidden" id="wizard-meal-picker-ac"></ul>
+        </label>
+        <label class="field-label">Notes
+          <input type="text" id="wizard-meal-picker-notes" class="field-input" placeholder="Optional" />
+        </label>
+      </div>
+      <div class="modal-footer">
+        <div></div>
+        <div class="modal-footer-right">
+          <button class="btn-text" id="wizard-meal-picker-cancel">Cancel</button>
+          <button class="btn-primary" id="wizard-meal-picker-save">Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- App -->
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
