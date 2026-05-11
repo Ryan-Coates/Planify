@@ -258,21 +258,25 @@ function _updateDayLabel(date) {
     date.toLocaleDateString('en-GB', opts);
 }
 
-/** Ensure allEvents/mealEvents cover the given date, fetching if needed. */
+/** Fetch allEvents/mealEvents for a single day (local timezone). */
 async function _ensureEventsForDate(date) {
   if (!isSignedIn()) { allEvents = DEMO_EVENTS; mealEvents = DEMO_MEALS; return; }
 
-  const dateStr  = toDateString(date);
-  const timeMin  = `${dateStr}T00:00:00Z`;
-  const timeMax  = `${dateStr}T23:59:59Z`;
+  // Use local midnight so all-day events on this date are included regardless of timezone
+  const tz      = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const dateStr = toDateString(date);
+  const start   = new Date(`${dateStr}T00:00:00`);
+  const end     = new Date(`${dateStr}T23:59:59`);
+  const timeMin = start.toISOString();
+  const timeMax = end.toISOString();
 
-  const visible  = store.getCalendarsVisible() ?? userCalendars.map(c => c.id);
-  const ownP     = userCalendars
+  const visible = store.getCalendarsVisible() ?? userCalendars.map(c => c.id);
+  const ownP    = userCalendars
     .filter(c => visible.includes(c.id) && c.summary !== 'Planify Meals')
     .map(c => listEvents(c.id, timeMin, timeMax));
-  const sharedP  = store.getSharedCalendars().map(c => listEvents(c.id, timeMin, timeMax));
+  const sharedP = store.getSharedCalendars().map(c => listEvents(c.id, timeMin, timeMax));
 
-  const results  = await Promise.all([...ownP, ...sharedP]);
+  const results = await Promise.all([...ownP, ...sharedP]);
   allEvents  = results.flat();
   mealEvents = await listMealEvents(timeMin, timeMax);
 }
@@ -289,11 +293,13 @@ function onPlanWeekClick() {
  * Throws on API failure — the wizard catches and shows the error.
  */
 async function onWizardSaveMeal(date, slot, name, notes, existingEvent) {
+  // All-day events: end.date must be the NEXT day (Google Calendar exclusive end)
+  const endDate = toDateString(addDays(new Date(date + 'T00:00:00'), 1));
   const eventBody = {
     summary: name,
     description: notes || undefined,
     start: { date },
-    end:   { date },
+    end:   { date: endDate },
     extendedProperties: {
       private: { planify_type: 'meal', meal_slot: slot },
     },
@@ -318,11 +324,16 @@ async function onWizardRemoveMeal(existingEvent) {
 // ---- Event/meal saved callbacks ----
 
 function onEventSaved() {
-  refreshWeek();
+  renderCurrentView();
+  // Fetch fresh data in background
+  if (viewMode === 'week') refreshWeek();
+  else renderCurrentDay();
 }
 
 function onMealSaved() {
-  refreshWeek();
+  // Force re-fetch for current view so the new meal shows immediately
+  if (viewMode === 'week') refreshWeek();
+  else renderCurrentDay();
 }
 
 function onCalendarVisibilityChanged() {

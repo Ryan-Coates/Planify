@@ -2,7 +2,7 @@
 
 import { createEvent, updateEvent, deleteEvent, listEvents } from './calendar.js';
 import { getMeals } from './mealLibrary.js';
-import { showToast, toDateString } from './utils.js';
+import { showToast, toDateString, addDays } from './utils.js';
 import { isSignedIn } from './auth.js';
 import { store } from './store.js';
 
@@ -83,13 +83,16 @@ export function closeMealModal() {
 }
 
 /**
- * List meal events for the given week range.
+ * List meal events for the given time range.
+ * Strictly filters by planify_type=meal so regular events on the shared
+ * calendar don't appear as meals.
  */
 export async function listMealEvents(timeMin, timeMax) {
   if (!isSignedIn()) return [];
   const calId = await _getMealCalendarId();
   if (!calId) return [];
-  return listEvents(calId, timeMin, timeMax);
+  const events = await listEvents(calId, timeMin, timeMax);
+  return events.filter(e => e.extendedProperties?.private?.planify_type === 'meal');
 }
 
 /**
@@ -124,12 +127,15 @@ async function _handleSave() {
   const notes = inputNotes().value.trim();
   const tz    = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
+  // All-day events: end.date must be the NEXT day (Google Calendar exclusive end)
+  const endDate = toDateString(addDays(new Date(date + 'T00:00:00'), 1));
+
   // Store as an all-day event with extended properties
   const eventBody = {
     summary: name,
     description: notes || undefined,
     start: { date },
-    end:   { date },
+    end:   { date: endDate },
     extendedProperties: {
       private: {
         planify_type: 'meal',
