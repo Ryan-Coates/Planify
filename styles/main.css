@@ -299,3 +299,27 @@ a { color: var(--color-primary); }
 
 /* ---------- Utility ---------- */
 .hidden { display: none !important; }
+
+/* ---------- View toggle ---------- */
+.view-toggle {
+  display: flex;
+  background: var(--bg-surface-2);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--border);
+}
+.view-toggle-btn {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: background var(--transition), color var(--transition);
+}
+.view-toggle-btn.active {
+  background: var(--bg-surface);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+.view-toggle-btn:hover:not(.active) { background: var(--bg-hover); }

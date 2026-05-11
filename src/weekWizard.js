@@ -282,7 +282,10 @@ async function saveMealPicker() {
   saveBtn.disabled = true;
   saveBtn.textContent = 'Saving…';
 
-  const date          = toDateString(addDays(_monday, _currentDay));
+  // Capture everything we need NOW before the async call, so any navigation
+  // that somehow fires mid-await doesn't corrupt the wrong day's slot.
+  const dayIdx        = _currentDay;
+  const date          = toDateString(addDays(_monday, dayIdx));
   const slot          = _pickerSlot;
   const existingEvent = _pickerExisting?._event || null;
 
@@ -291,11 +294,11 @@ async function saveMealPicker() {
     if (_onSaveMeal) {
       savedEvent = await _onSaveMeal(date, slot, name, notes, existingEvent);
     }
-    if (!_dayMeals[_currentDay]) _dayMeals[_currentDay] = {};
+    if (!_dayMeals[dayIdx]) _dayMeals[dayIdx] = {};
     // Store the returned event so future edits use updateEvent correctly
-    _dayMeals[_currentDay][slot] = { name, notes, _event: savedEvent || null };
+    _dayMeals[dayIdx][slot] = { name, notes, _event: savedEvent || null };
     closeMealPicker();
-    _renderWizardMeals(_currentDay);
+    _renderWizardMeals(dayIdx);
   } catch (e) {
     showToast(`Meal save failed: ${e.message}`, 'error');
   } finally {

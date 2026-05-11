@@ -4,6 +4,7 @@ import { store } from './store.js';
 import { initAuth, signIn, signOut, isSignedIn } from './auth.js';
 import { listCalendars, listEvents } from './calendar.js';
 import { initWeekView, renderWeek } from './weekView.js';
+import { initDayView, renderDay } from './dayView.js';
 import { initEventModal, openNewEventModal, openEditEventModal } from './eventModal.js';
 import { initMealPlanner, openNewMealModal, openEditMealModal, listMealEvents, resetMealCalendarId, _getMealCalendarId } from './mealPlanner.js';
 import { initSettings, openSettings } from './settings.js';
@@ -13,9 +14,11 @@ import { startOfWeek, addDays, toDateString, showToast } from './utils.js';
 import { createEvent, updateEvent, deleteEvent } from './calendar.js';
 
 // ---- State ----
-let weekOffset   = store.getWeekOffset();
-let allEvents    = [];
-let mealEvents   = [];
+let weekOffset    = store.getWeekOffset();
+let dayOffset     = 0;  // days from today in day-view mode
+let viewMode      = 'day'; // 'day' | 'week'
+let allEvents     = [];
+let mealEvents    = [];
 let userCalendars = [];
 
 // ---- Init ----
@@ -27,6 +30,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Week view
   initWeekView({
+    onCellClick: (date, hour) => openNewEventModal(date, hour),
+    onEventClick: (event) => {
+      const calId = _calendarIdForEvent(event);
+      openEditEventModal(event, calId);
+    },
+    onMealAddClick: (date) => openNewMealModal(date),
+    onMealClick: (mealEvent) => openEditMealModal(mealEvent),
+  });
+
+  // Day view
+  initDayView({
     onCellClick: (date, hour) => openNewEventModal(date, hour),
     onEventClick: (event) => {
       const calId = _calendarIdForEvent(event);
@@ -51,23 +65,66 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Toolbar buttons
   document.getElementById('btn-plan-week').addEventListener('click', onPlanWeekClick);
-  document.getElementById('btn-prev-week').addEventListener('click', () => changeWeek(-1));
-  document.getElementById('btn-next-week').addEventListener('click', () => changeWeek(1));
+  document.getElementById('btn-view-day').addEventListener('click', () => switchView('day'));
+  document.getElementById('btn-view-week').addEventListener('click', () => switchView('week'));
+  document.getElementById('btn-prev-week').addEventListener('click', () => navigatePrev());
+  document.getElementById('btn-next-week').addEventListener('click', () => navigateNext());
   document.getElementById('btn-today').addEventListener('click', () => goToToday());
   document.getElementById('btn-theme').addEventListener('click', toggleTheme);
   document.getElementById('btn-settings').addEventListener('click', openSettings);
   document.getElementById('btn-signin').addEventListener('click', signIn);
   document.getElementById('btn-signout').addEventListener('click', signOut);
   document.getElementById('btn-add-event').addEventListener('click', () => {
-    openNewEventModal(toDateString(new Date()));
+    openNewEventModal(getCurrentDayDateStr());
   });
+
+  // Set initial view
+  _applyViewMode();
 
   // Keyboard shortcuts
   document.addEventListener('keydown', onKeyDown);
 
-  // Initial render (with mock events for demo)
-  renderCurrentWeek();
+  // Initial render
+  renderCurrentView();
 });
+
+// ---- View mode ----
+
+function switchView(mode) {
+  viewMode = mode;
+  _applyViewMode();
+  renderCurrentView();
+}
+
+function _applyViewMode() {
+  document.getElementById('btn-view-day').classList.toggle('active', viewMode === 'day');
+  document.getElementById('btn-view-week').classList.toggle('active', viewMode === 'week');
+  // Prev/Next label
+  document.getElementById('btn-prev-week').title = viewMode === 'week' ? 'Previous week' : 'Previous day';
+  document.getElementById('btn-next-week').title = viewMode === 'week' ? 'Next week'     : 'Next day';
+  // Container class for CSS mobile scoping
+  const wc = document.getElementById('week-container');
+  wc.classList.toggle('view-week', viewMode === 'week');
+  wc.classList.toggle('view-day',  viewMode === 'day');
+}
+
+function navigatePrev() {
+  if (viewMode === 'week') changeWeek(-1);
+  else { dayOffset--; renderCurrentView(); }
+}
+
+function navigateNext() {
+  if (viewMode === 'week') changeWeek(1);
+  else { dayOffset++; renderCurrentView(); }
+}
+
+function getCurrentDayDate() {
+  return addDays(new Date(), dayOffset);
+}
+
+function getCurrentDayDateStr() {
+  return toDateString(getCurrentDayDate());
+}
 
 // ---- Auth callbacks ----
 
@@ -132,9 +189,10 @@ function changeWeek(delta) {
 }
 
 function goToToday() {
+  dayOffset  = 0;
   weekOffset = 0;
   store.setWeekOffset(0);
-  refreshWeek();
+  renderCurrentView();
 }
 
 function getCurrentMonday() {
@@ -170,11 +228,53 @@ async function refreshWeek() {
     mealEvents = DEMO_MEALS;
   }
 
-  renderCurrentWeek();
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  if (viewMode === 'week') {
+    renderCurrentWeek();
+  } else {
+    renderCurrentDay();
+  }
 }
 
 function renderCurrentWeek() {
   renderWeek(getCurrentMonday(), allEvents, mealEvents);
+}
+
+function renderCurrentDay() {
+  const date = getCurrentDayDate();
+  // Fetch events for this specific day if we don't have a wide enough window
+  _ensureEventsForDate(date).then(() => {
+    renderDay(date, allEvents, mealEvents);
+    _updateDayLabel(date);
+  });
+}
+
+function _updateDayLabel(date) {
+  const opts = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
+  document.getElementById('week-label').textContent =
+    date.toLocaleDateString('en-GB', opts);
+}
+
+/** Ensure allEvents/mealEvents cover the given date, fetching if needed. */
+async function _ensureEventsForDate(date) {
+  if (!isSignedIn()) { allEvents = DEMO_EVENTS; mealEvents = DEMO_MEALS; return; }
+
+  const dateStr  = toDateString(date);
+  const timeMin  = `${dateStr}T00:00:00Z`;
+  const timeMax  = `${dateStr}T23:59:59Z`;
+
+  const visible  = store.getCalendarsVisible() ?? userCalendars.map(c => c.id);
+  const ownP     = userCalendars
+    .filter(c => visible.includes(c.id) && c.summary !== 'Planify Meals')
+    .map(c => listEvents(c.id, timeMin, timeMax));
+  const sharedP  = store.getSharedCalendars().map(c => listEvents(c.id, timeMin, timeMax));
+
+  const results  = await Promise.all([...ownP, ...sharedP]);
+  allEvents  = results.flat();
+  mealEvents = await listMealEvents(timeMin, timeMax);
 }
 
 // ---- Plan Week wizard ----
@@ -247,14 +347,15 @@ function toggleTheme() {
 // ---- Keyboard shortcuts ----
 
 function onKeyDown(e) {
-  // Don't fire shortcuts when typing in inputs
   if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
 
   switch (e.key) {
-    case 'ArrowLeft':  changeWeek(-1); break;
-    case 'ArrowRight': changeWeek(1);  break;
+    case 'ArrowLeft':  navigatePrev(); break;
+    case 'ArrowRight': navigateNext(); break;
     case 't':          goToToday();    break;
-    case 'n':          openNewEventModal(toDateString(new Date())); break;
+    case 'n':          openNewEventModal(getCurrentDayDateStr()); break;
+    case 'w':          switchView('week'); break;
+    case 'd':          switchView('day');  break;
   }
 }
 

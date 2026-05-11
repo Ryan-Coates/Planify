@@ -1,13 +1,13 @@
 // eventModal.js — add/edit calendar event modal
 
-import { createEvent, updateEvent, deleteEvent, listCalendars } from './calendar.js';
+import { createEvent, updateEvent, deleteEvent } from './calendar.js';
 import { showToast, toDateString } from './utils.js';
 import { isSignedIn } from './auth.js';
+import { store } from './store.js';
 
 let _onSaved = null;
 let _editingEvent = null;
 let _editingCalendarId = null;
-let _calendars = [];
 
 const overlay  = () => document.getElementById('event-modal-overlay');
 const titleEl  = () => document.getElementById('event-modal-title');
@@ -41,7 +41,7 @@ export function initEventModal(onSaved) {
  * @param {string} date     YYYY-MM-DD
  * @param {number} hour     0-23
  */
-export async function openNewEventModal(date, hour = 9) {
+export function openNewEventModal(date, hour = 9) {
   _editingEvent = null;
   _editingCalendarId = null;
 
@@ -54,7 +54,7 @@ export async function openNewEventModal(date, hour = 9) {
   selectColour().value = '';
   btnDelete().classList.add('hidden');
 
-  await _populateCalendars();
+  _populateCalendars();
   overlay().classList.remove('hidden');
   inputTitle().focus();
 }
@@ -84,7 +84,7 @@ export async function openEditEventModal(event, calendarId) {
     inputEnd().value   = '00:00';
   }
 
-  await _populateCalendars(calendarId);
+  _populateCalendars(calendarId);
   overlay().classList.remove('hidden');
   inputTitle().focus();
 }
@@ -94,26 +94,25 @@ export function closeEventModal() {
   _editingEvent = null;
 }
 
-async function _populateCalendars(selectedId) {
+function _populateCalendars(selectedId) {
   const sel = selectCal();
   sel.innerHTML = '';
 
-  if (!isSignedIn()) {
+  const shared = store.getSharedCalendars();
+
+  if (!isSignedIn() || shared.length === 0) {
+    // Fallback: allow adding to primary when no shared calendar is configured
     const opt = document.createElement('option');
     opt.value = 'primary';
-    opt.textContent = 'Primary calendar';
+    opt.textContent = 'My Calendar (primary)';
     sel.appendChild(opt);
     return;
   }
 
-  if (_calendars.length === 0) {
-    _calendars = await listCalendars();
-  }
-
-  _calendars.forEach(cal => {
+  shared.forEach(cal => {
     const opt = document.createElement('option');
     opt.value = cal.id;
-    opt.textContent = cal.summary;
+    opt.textContent = cal.name || cal.id;
     if (cal.id === selectedId) opt.selected = true;
     sel.appendChild(opt);
   });

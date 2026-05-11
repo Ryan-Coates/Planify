@@ -1,0 +1,134 @@
+/* ===================================================
+   Planify — mobile.css
+   Responsive overrides for small screens (≤ 640px)
+   =================================================== */
+
+@media (max-width: 640px) {
+
+  /* ---- Toolbar ---- */
+  .toolbar {
+    padding: 0 10px;
+    gap: 6px;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--toolbar-height);
+  }
+
+  .toolbar-left {
+    min-width: 0;
+    flex: 0 0 auto;
+  }
+
+  .toolbar-center {
+    flex: 1;
+    gap: 4px;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+
+  .toolbar-right {
+    min-width: 0;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  /* Hide long week label text on very small screens */
+  .week-label {
+    font-size: .82rem;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+
+  /* Compact auth area */
+  #user-name { display: none; }
+  .btn-signout { display: none; }
+
+  /* Plan week button — icon only */
+  .btn-plan-week { padding: 6px 10px; font-size: .78rem; }
+
+  /* FAB sits above bottom safe area */
+  .fab {
+    bottom: 16px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+    font-size: 1.5rem;
+  }
+
+  /* ---- Settings panel full-width on mobile ---- */
+  .settings-overlay { padding-top: 0; align-items: flex-end; }
+  .settings-panel {
+    width: 100vw;
+    max-width: 100vw;
+    height: 80vh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ---- Modals full-width ---- */
+  .modal-overlay { padding: 8px; align-items: flex-end; }
+  .modal, .modal-sm {
+    max-width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 92vh;
+  }
+
+  .field-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* ---- Week grid: hide on mobile (day view is default) ---- */
+  .week-container.view-week .week-header,
+  .week-container.view-week .meal-row,
+  .week-container.view-week .time-grid {
+    overflow-x: auto;
+  }
+
+  /* Week view scrolls horizontally on mobile */
+  .week-container.view-week {
+    overflow-x: auto;
+  }
+  .week-container.view-week .week-header,
+  .week-container.view-week .meal-row {
+    min-width: 560px;
+  }
+  .week-container.view-week .time-grid {
+    min-width: 560px;
+  }
+
+  /* ---- Day view strips ---- */
+  .day-view-meal-strip {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .day-view-meal-slot { min-width: 80px; }
+  .day-view-date-info { gap: 8px; }
+  .day-view-dayname { font-size: .9rem; }
+
+  /* ---- Wizard panel ---- */
+  .wizard-overlay { padding: 0; align-items: flex-end; }
+  .wizard-panel {
+    max-width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 92vh;
+  }
+
+  /* ---- Toast position ---- */
+  .toast-container {
+    bottom: 70px;
+    right: 12px;
+    left: 12px;
+  }
+  .toast { max-width: 100%; }
+}
+
+@media (max-width: 400px) {
+  .view-toggle { display: none; } /* hidden at tiny sizes — default stays as day */
+  .btn-plan-week { display: none; }
+}

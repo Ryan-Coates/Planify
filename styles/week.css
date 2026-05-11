@@ -229,16 +229,92 @@ body.theme-dark .event-colour-default { background: #2a2f5a; color: #9fa8da; }
   background: #f44336;
 }
 
-/* ---------- Responsive: mobile shows 1-day ---------- */
-@media (max-width: 640px) {
-  .week-header,
-  .meal-row,
-  .time-grid {
-    grid-template-columns: 40px 1fr;
-  }
-  .day-header:not(.mobile-visible),
-  .hour-row:not(.mobile-visible),
-  .meal-day-cell:not(.mobile-visible) {
-    display: none;
-  }
+/* ---- Day view (day-view-grid uses single data column) ---- */
+.day-view-grid {
+  grid-template-columns: 52px 1fr;
+}
+
+/* Day view header */
+.day-view-header {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+.day-view-date-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.day-view-dayname {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.day-view-datenum {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--bg-surface-2);
+}
+.day-view-datenum.is-today {
+  background: var(--color-primary);
+  color: #fff;
+}
+.day-view-monthyear {
+  font-size: .9rem;
+  color: var(--text-muted);
+}
+.day-view-today-badge {
+  background: var(--color-today);
+  color: var(--color-today-border);
+  font-size: .75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--color-today-border);
+}
+
+/* Day view meal strip */
+.day-view-meal-strip {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-surface-2);
+  border-bottom: 2px solid var(--border);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+.day-view-meal-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 100px;
+  flex: 1;
+}
+.day-view-meal-slot-label {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+}
+.day-view-meal-chip {
+  font-size: .8rem;
+  padding: 4px 10px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.day-view-meal-add {
+  width: 28px;
+  height: 28px;
+  font-size: 1rem;
 }
