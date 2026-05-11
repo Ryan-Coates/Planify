@@ -62,7 +62,7 @@ export function renderDay(date, events, meals) {
     return mDate === dateStr;
   });
 
-  ['breakfast', 'lunch', 'dinner'].forEach(slot => {
+  ['dinner'].forEach(slot => {
     const slotEl = document.createElement('div');
     slotEl.className = 'day-view-meal-slot';
 

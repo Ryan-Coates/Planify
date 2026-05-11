@@ -57,8 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Wizard
   initWizard({
-    onSaveMeal: onWizardSaveMeal,
-    onRemoveMeal: onWizardRemoveMeal,
+    onSaveMeal:        onWizardSaveMeal,
+    onRemoveMeal:      onWizardRemoveMeal,
+    onSaveHousehold:   onWizardSaveHousehold,
+    onRemoveHousehold: onWizardRemoveHousehold,
     onAddEvent: (date, hour) => openNewEventModal(date, hour),
     onDone: refreshWeek,
   });
@@ -284,7 +286,35 @@ async function _ensureEventsForDate(date) {
 // ---- Plan Week wizard ----
 
 function onPlanWeekClick() {
-  openWizard(getCurrentMonday(), allEvents, mealEvents);
+  // Always fetch the full week's data before opening the wizard,
+  // because in day view allEvents/mealEvents only cover today.
+  _fetchWeekForWizard().then(({ weekEvents, weekMeals }) => {
+    openWizard(getCurrentMonday(), weekEvents, weekMeals);
+  });
+}
+
+async function _fetchWeekForWizard() {
+  const monday = getCurrentMonday();
+  const sunday = addDays(monday, 6);
+  sunday.setHours(23, 59, 59, 999);
+
+  if (!isSignedIn()) {
+    return { weekEvents: DEMO_EVENTS, weekMeals: DEMO_MEALS };
+  }
+
+  const timeMin = monday.toISOString();
+  const timeMax = sunday.toISOString();
+
+  const visible = store.getCalendarsVisible() ?? userCalendars.map(c => c.id);
+  const ownP = userCalendars
+    .filter(c => visible.includes(c.id) && c.summary !== 'Planify Meals')
+    .map(c => listEvents(c.id, timeMin, timeMax));
+  const sharedP = store.getSharedCalendars().map(c => listEvents(c.id, timeMin, timeMax));
+
+  const results   = await Promise.all([...ownP, ...sharedP]);
+  const weekEvents = results.flat();
+  const weekMeals  = await listMealEvents(timeMin, timeMax);
+  return { weekEvents, weekMeals };
 }
 
 /**
@@ -315,6 +345,22 @@ async function onWizardSaveMeal(date, slot, name, notes, existingEvent) {
 }
 
 async function onWizardRemoveMeal(existingEvent) {
+  if (!existingEvent?.id) return;
+  const calId = await _getMealCalendarId();
+  await deleteEvent(calId, existingEvent.id);
+  refreshWeek().catch(() => {});
+}
+
+async function onWizardSaveHousehold(date, key, eventBody, existingEvent) {
+  const calId = await _getMealCalendarId();
+  const saved = existingEvent
+    ? await updateEvent(calId, existingEvent.id, eventBody)
+    : await createEvent(calId, eventBody);
+  refreshWeek().catch(() => {});
+  return saved;
+}
+
+async function onWizardRemoveHousehold(existingEvent) {
   if (!existingEvent?.id) return;
   const calId = await _getMealCalendarId();
   await deleteEvent(calId, existingEvent.id);

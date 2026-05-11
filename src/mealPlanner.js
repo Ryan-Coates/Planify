@@ -54,7 +54,7 @@ export function openNewMealModal(date, slot) {
   titleEl().textContent = 'Add Meal';
   inputName().value  = '';
   inputDate().value  = date || toDateString(new Date());
-  selectSlot().value = slot || 'breakfast';
+  selectSlot().value = slot || 'dinner';
   inputNotes().value = '';
   btnDelete().classList.add('hidden');
   acList().classList.add('hidden');

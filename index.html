@@ -182,8 +182,6 @@
         </label>
         <label class="field-label">Slot
           <select id="meal-slot" class="field-input">
-            <option value="breakfast">Breakfast</option>
-            <option value="lunch">Lunch</option>
             <option value="dinner">Dinner</option>
           </select>
         </label>
@@ -305,22 +303,16 @@
           </div>
         </section>
 
+        <!-- Household quick-plan -->
+        <section class="wizard-section" id="wizard-household">
+          <div class="wizard-section-header"><span>👨‍👩‍👦 People</span></div>
+          <div id="wizard-household-list"></div>
+        </section>
+
         <!-- Meals -->
         <section class="wizard-section">
           <div class="wizard-section-header"><span>🍽 Meals</span></div>
           <div class="wizard-meal-slots" id="wizard-meal-slots">
-            <div class="wizard-meal-slot" data-slot="breakfast">
-              <div class="wizard-meal-slot-label">🌅 Breakfast</div>
-              <div class="wizard-meal-value" id="wizard-meal-breakfast">
-                <button class="wizard-meal-add-btn" data-slot="breakfast">+ Add</button>
-              </div>
-            </div>
-            <div class="wizard-meal-slot" data-slot="lunch">
-              <div class="wizard-meal-slot-label">☀️ Lunch</div>
-              <div class="wizard-meal-value" id="wizard-meal-lunch">
-                <button class="wizard-meal-add-btn" data-slot="lunch">+ Add</button>
-              </div>
-            </div>
             <div class="wizard-meal-slot" data-slot="dinner">
               <div class="wizard-meal-slot-label">🌙 Dinner</div>
               <div class="wizard-meal-value" id="wizard-meal-dinner">

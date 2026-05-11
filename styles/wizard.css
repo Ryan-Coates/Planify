@@ -252,3 +252,84 @@
   .wizard-panel { max-height: 100vh; border-radius: 0; }
   .wizard-overlay { padding: 0; }
 }
+
+/* ---- Household quick-plan ---- */
+#wizard-household-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wizard-household-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-surface-2);
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  transition: border-color var(--transition), background var(--transition);
+}
+.wizard-household-row.is-set {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.wizard-household-name {
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 52px;
+  flex-shrink: 0;
+}
+
+.wizard-household-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+/* Select control */
+.wizard-household-select {
+  flex: 1;
+  max-width: 220px;
+  padding: 5px 10px;
+  font-size: .85rem;
+  font-family: var(--font);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.wizard-household-select:disabled { opacity: .5; }
+
+/* Checkbox label */
+.wizard-household-cb-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: .875rem;
+  color: var(--text-secondary);
+  user-select: none;
+}
+.wizard-household-cb-label input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+  flex-shrink: 0;
+}
+.wizard-household-cb-label input:disabled { opacity: .5; }
+
+/* Status indicator (✓ / ⏳) */
+.wizard-household-status {
+  font-size: .9rem;
+  min-width: 18px;
+  text-align: center;
+  color: var(--color-success);
+}
