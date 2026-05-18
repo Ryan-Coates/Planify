@@ -564,7 +564,13 @@ async function saveMealPicker() {
   try {
     let savedEvent = null;
     if (_onSaveMeal) {
-      savedEvent = await _onSaveMeal(date, slot, name, notes, existingEvent);
+      try {
+        savedEvent = await _onSaveMeal(date, slot, name, notes, existingEvent);
+      } catch (calErr) {
+        // Calendar save failed — keep local state anyway so the wizard
+        // remains usable; show a non-blocking warning.
+        showToast(`Saved locally (calendar: ${calErr.message})`, 'warn');
+      }
     }
     if (!_dayMeals[dayIdx]) _dayMeals[dayIdx] = {};
     // Store the returned event so future edits use updateEvent correctly
