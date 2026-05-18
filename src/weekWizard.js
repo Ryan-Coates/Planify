@@ -25,10 +25,9 @@ const HOUSEHOLD = [
     event:  { summary: 'Ryan — On Call 📟', startTime: '08:00', endTime: '16:00' },
   },
   {
-    key:              'ryan_work',
-    person:           'Ryan',
-    type:             'select',
-    propagateToUnset: true,   // fills unset weekdays when first set
+    key:     'ryan_work',
+    person:  'Ryan',
+    type:    'select',
     options: [
       { value: 'wfh',    label: 'WFH 🏠',       summary: 'Ryan — WFH 🏠',       startTime: '08:00', endTime: '16:00' },
       { value: 'office', label: 'Office 🏢',     summary: 'Ryan — Office 🏢',    startTime: '08:00', endTime: '16:00' },
@@ -36,16 +35,28 @@ const HOUSEHOLD = [
     ],
   },
   {
-    key:              'jess_work',
-    person:           'Jess',
-    type:             'select',
-    propagateToUnset: true,   // fills unset weekdays when first set
+    key:     'jess_work',
+    person:  'Jess',
+    type:    'select',
     options: [
       { value: 'alm_wfh',       label: 'ALM WFH 🏠',          summary: 'Jess — ALM WFH 🏠',          startTime: '08:00', endTime: '16:00' },
       { value: 'alm_office',    label: 'ALM Office 🏢',        summary: 'Jess — ALM Office 🏢',       startTime: '08:00', endTime: '16:00' },
       { value: 'support_all',   label: 'Support All Day 📞',   summary: 'Jess — Support All Day 📞',  allDay: true },
       { value: 'support_short', label: 'Support Short Day 📞', summary: 'Jess — Support Short Day 📞', startTime: '08:00', endTime: '14:00' },
       { value: 'off',          label: 'Day Off 🌴',           summary: 'Jess — Day Off 🌴',           startTime: '08:00', endTime: '16:00' },
+    ],
+  },
+  {
+    key:     'family_day',
+    person:  'Family',
+    type:    'select',
+    options: [
+      { value: 'crafting',    label: 'Crafting 🎨',      summary: 'Family — Crafting 🎨',      startTime: '19:00', endTime: '22:00' },
+      { value: 'exercise',    label: 'Exercise 🏃',      summary: 'Family — Exercise 🏃',      startTime: '19:00', endTime: '20:30' },
+      { value: 'family',      label: 'Family Time 👨‍👩‍👦',   summary: 'Family Time 👨‍👩‍👦',             startTime: '18:00', endTime: '21:00' },
+      { value: 'gaming',      label: 'Gaming 🎮',        summary: 'Family — Gaming 🎮',        startTime: '19:00', endTime: '22:00' },
+      { value: 'board_games', label: 'Board Games 🎲',   summary: 'Family — Board Games 🎲',   startTime: '19:00', endTime: '22:00' },
+      { value: 'movie',       label: 'Movie 🎬',         summary: 'Family — Movie 🎬',         startTime: '19:00', endTime: '21:30' },
     ],
   },
 ];
@@ -170,6 +181,7 @@ function navigateDay(delta) {
 }
 
 function goToDay(idx) {
+  closeMealPicker(); // reset picker state when navigating days
   _currentDay = idx;
   _renderDay(idx);
 }
@@ -491,25 +503,6 @@ async function _saveHouseholdItem(dayIdx, member, value) {
   const saved = await _onSaveHousehold(date, member.key, eventBody, existing);
   _dayPeople[dayIdx][member.key] = { value, _event: saved };
   _syncToAllEvents(existing, saved);
-
-  // Propagate to unset weekdays (Mon–Fri = indices 0–4)
-  if (member.propagateToUnset) {
-    for (let i = 0; i < 5; i++) {
-      if (i === dayIdx) continue;
-      if (!_dayPeople[i]) _dayPeople[i] = {};
-      if (_dayPeople[i][member.key]?.value) continue; // already set — don't overwrite
-      const d       = toDateString(addDays(_monday, i));
-      const evBody  = _buildHouseholdEventBody(member, d, value);
-      if (!evBody) continue;
-      try {
-        const s = await _onSaveHousehold(d, member.key, evBody, null);
-        _dayPeople[i][member.key] = { value, _event: s };
-        _allEvents.push(s);
-      } catch {
-        // best-effort — don't fail the primary save
-      }
-    }
-  }
 }
 
 // ---- Meal picker ----

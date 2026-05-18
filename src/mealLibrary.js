@@ -12,6 +12,28 @@ const FILE_NAME = 'planify-meals.json';
 let _fileId = null;   // Drive file ID once discovered/created
 let _meals  = [];     // in-memory copy
 
+// ---- Default dinner library ----
+const DEFAULT_MEALS = [
+  'Spaghetti Bolognese', 'Chicken Stir Fry', 'Beef Tacos', 'Butter Chicken',
+  'Homemade Pizza', 'Fish and Chips', 'Chicken Schnitzel', 'Beef Lasagne',
+  'Lamb Chops', 'Pork Fried Rice', 'Thai Green Curry', 'Beef Stew',
+  'Roast Chicken', 'Salmon with Veggies', 'Chicken Quesadillas', 'Beef Burger',
+  'Mushroom Risotto', 'Chicken Caesar Salad', 'Prawn Pasta', 'BBQ Ribs',
+  'Chicken Soup', 'Beef Nachos', 'Honey Soy Chicken', 'Pork Dumplings',
+  'Chicken Parmigiana', 'Lamb Stew', 'Tuna Pasta Bake', 'Beef Kebabs',
+  'Teriyaki Salmon', 'Vegetable Curry', 'Pulled Pork Sliders', 'Pad Thai',
+  'Chicken Fajitas', 'Meatball Sub', 'Bacon and Egg Pasta', 'Sweet and Sour Pork',
+  'Chicken Noodle Soup', 'Beef Enchiladas', 'Prawn Fried Rice', 'Mushroom Pasta',
+].map((name, i) => ({
+  id: `default-${i}`,
+  name,
+  slot: 'dinner',
+  tags: [],
+  notes: '',
+  createdAt: '2024-01-01T00:00:00.000Z',
+  isDefault: true,
+}));
+
 // ---- Public API ----
 
 export function getMeals() {
@@ -25,6 +47,7 @@ export function getMeals() {
 export async function loadLibrary() {
   if (!isSignedIn()) {
     _meals = store.getMealsCache();
+    if (_meals.length === 0) _meals = [...DEFAULT_MEALS];
     return _meals;
   }
 
@@ -34,14 +57,16 @@ export async function loadLibrary() {
       const data = await _readFile(_fileId);
       _meals = data.meals || [];
     } else {
-      // First run — start with empty library
-      _meals = store.getMealsCache(); // import any locally cached meals
+      // First run — start with cached meals or defaults
+      _meals = store.getMealsCache();
     }
+    if (_meals.length === 0) _meals = [...DEFAULT_MEALS];
     store.setMealsCache(_meals);
     return _meals;
   } catch (e) {
     showToast('Could not load meal library from Drive — using local cache.', 'error');
     _meals = store.getMealsCache();
+    if (_meals.length === 0) _meals = [...DEFAULT_MEALS];
     return _meals;
   }
 }
