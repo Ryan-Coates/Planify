@@ -509,10 +509,12 @@ async function _saveHouseholdItem(dayIdx, member, value) {
 
 let _pickerSlot     = null;
 let _pickerExisting = null;
+let _pickerDayIdx   = null;  // day index when picker was opened
 
 function openMealPicker(slot, existing = null) {
   _pickerSlot     = slot;
   _pickerExisting = existing;
+  _pickerDayIdx   = _currentDay;
 
   const slotLabel = slot.charAt(0).toUpperCase() + slot.slice(1);
   const isEdit    = !!existing;
@@ -536,6 +538,7 @@ function closeMealPicker() {
   pickerOverlay().classList.add('hidden');
   _pickerSlot     = null;
   _pickerExisting = null;
+  _pickerDayIdx   = null;
 }
 
 async function saveMealPicker() {
@@ -550,9 +553,10 @@ async function saveMealPicker() {
   saveBtn.disabled = true;
   saveBtn.textContent = 'Saving…';
 
-  // Capture everything we need NOW before the async call, so any navigation
-  // that somehow fires mid-await doesn't corrupt the wrong day's slot.
-  const dayIdx        = _currentDay;
+  // Capture everything we need NOW before the async call.
+  // Use _pickerDayIdx (set when picker opened) so the slot is always
+  // updated for the correct day even if navigation occurred.
+  const dayIdx        = _pickerDayIdx ?? _currentDay;
   const date          = toDateString(addDays(_monday, dayIdx));
   const slot          = _pickerSlot;
   const existingEvent = _pickerExisting?._event || null;
@@ -566,7 +570,7 @@ async function saveMealPicker() {
     // Store the returned event so future edits use updateEvent correctly
     _dayMeals[dayIdx][slot] = { name, notes, _event: savedEvent || null };
     closeMealPicker();
-    _renderWizardMeals(dayIdx);
+    if (dayIdx === _currentDay) _renderWizardMeals(dayIdx);
   } catch (e) {
     showToast(`Meal save failed: ${e.message}`, 'error');
   } finally {
@@ -588,9 +592,12 @@ async function removeMealPicker() {
     if (_onRemoveMeal && existing._event) {
       await _onRemoveMeal(existing._event);
     }
-    if (_dayMeals[_currentDay]) delete _dayMeals[_currentDay][slot];
+    const dayIdx = _pickerDayIdx ?? _currentDay;
+    if (_dayMeals[dayIdx]) delete _dayMeals[dayIdx][slot];
     closeMealPicker();
-    _renderWizardMeals(_currentDay);
+    // Only re-render if we're still on the same day, otherwise the
+    // render will happen naturally when the user navigates back.
+    if (dayIdx === _currentDay) _renderWizardMeals(dayIdx);
   } catch (e) {
     showToast(`Remove failed: ${e.message}`, 'error');
   } finally {
