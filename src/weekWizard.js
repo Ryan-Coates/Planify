@@ -72,18 +72,20 @@ let _onRemoveMeal    = null;
 let _onSaveHousehold  = null; // callback(date, key, eventBody, existingEvent) → Promise<savedEvent>
 let _onRemoveHousehold = null;// callback(existingEvent) → Promise
 let _onAddEvent      = null;
+let _onNavigateWeek  = null; // callback(delta: -1|+1) → void
 let _onDone          = null;
 
 // ---- DOM helpers ----
 const wizOverlay  = () => document.getElementById('wizard-overlay');
 const pickerOverlay = () => document.getElementById('wizard-meal-picker-overlay');
 
-export function initWizard({ onSaveMeal, onRemoveMeal, onSaveHousehold, onRemoveHousehold, onAddEvent, onDone }) {
+export function initWizard({ onSaveMeal, onRemoveMeal, onSaveHousehold, onRemoveHousehold, onAddEvent, onNavigateWeek, onDone }) {
   _onSaveMeal        = onSaveMeal;
   _onRemoveMeal      = onRemoveMeal;
   _onSaveHousehold   = onSaveHousehold;
   _onRemoveHousehold = onRemoveHousehold;
   _onAddEvent        = onAddEvent;
+  _onNavigateWeek    = onNavigateWeek;
   _onDone            = onDone;
 
   document.getElementById('btn-close-wizard').addEventListener('click', closeWizard);
@@ -91,6 +93,8 @@ export function initWizard({ onSaveMeal, onRemoveMeal, onSaveHousehold, onRemove
 
   document.getElementById('wizard-btn-prev').addEventListener('click', () => navigateDay(-1));
   document.getElementById('wizard-btn-next').addEventListener('click', () => navigateDay(1));
+  document.getElementById('wizard-btn-prev-week').addEventListener('click', () => { if (_onNavigateWeek) _onNavigateWeek(-1); });
+  document.getElementById('wizard-btn-next-week').addEventListener('click', () => { if (_onNavigateWeek) _onNavigateWeek(+1); });
   document.getElementById('wizard-btn-add-event').addEventListener('click', () => {
     const date = toDateString(addDays(_monday, _currentDay));
     if (_onAddEvent) _onAddEvent(date, 9);
@@ -160,6 +164,7 @@ export function openWizard(monday, allEvents, mealEvents) {
   }
 
   _buildDots();
+  _updateWeekLabel();
   wizOverlay().classList.remove('hidden');
   _renderDay(_currentDay);
 }
@@ -306,6 +311,21 @@ function _renderWizardMeals(dayIdx) {
       container.closest('.wizard-meal-slot').classList.remove('has-meal');
     }
   });
+}
+
+function _updateWeekLabel() {
+  const el = document.getElementById('wizard-week-label');
+  if (!el || !_monday) return;
+  const sunday = addDays(_monday, 6);
+  const mDay   = _monday.getDate();
+  const sDay   = sunday.getDate();
+  const mMon   = _monday.toLocaleString('default', { month: 'short' });
+  const sMon   = sunday.toLocaleString('default', { month: 'short' });
+  const year   = sunday.getFullYear();
+  const sameMonth = _monday.getMonth() === sunday.getMonth();
+  el.textContent = sameMonth
+    ? `${mDay}–${sDay} ${mMon} ${year}`
+    : `${mDay} ${mMon} – ${sDay} ${sMon} ${year}`;
 }
 
 function _buildDots() {

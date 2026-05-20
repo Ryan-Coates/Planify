@@ -74,6 +74,28 @@
   margin-top: 2px;
 }
 
+/* ---- Week navigation ---- */
+.wizard-week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 24px 0;
+  flex-shrink: 0;
+}
+.wizard-week-label {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 140px;
+  text-align: center;
+}
+.wizard-week-nav .btn-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 4px 8px;
+}
+
 /* ---- Progress ---- */
 .wizard-progress {
   padding: 10px 24px 6px;

@@ -14,12 +14,13 @@ import { startOfWeek, addDays, toDateString, showToast } from './utils.js';
 import { createEvent, updateEvent, deleteEvent } from './calendar.js';
 
 // ---- State ----
-let weekOffset    = store.getWeekOffset();
-let dayOffset     = 0;  // days from today in day-view mode
-let viewMode      = 'day'; // 'day' | 'week'
-let allEvents     = [];
-let mealEvents    = [];
-let userCalendars = [];
+let weekOffset        = store.getWeekOffset();
+let dayOffset         = 0;  // days from today in day-view mode
+let viewMode          = 'day'; // 'day' | 'week'
+let allEvents         = [];
+let mealEvents        = [];
+let userCalendars     = [];
+let _wizardWeekOffset = 0;  // offset for the week being planned in the wizard
 
 // ---- Init ----
 document.addEventListener('DOMContentLoaded', () => {
@@ -62,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
     onSaveHousehold:   onWizardSaveHousehold,
     onRemoveHousehold: onWizardRemoveHousehold,
     onAddEvent: (date, hour) => openNewEventModal(date, hour),
+    onNavigateWeek:    onWizardNavigateWeek,
     onDone: refreshWeek,
   });
 
@@ -286,15 +288,27 @@ async function _ensureEventsForDate(date) {
 // ---- Plan Week wizard ----
 
 function onPlanWeekClick() {
+  _wizardWeekOffset = 0;
   // Always fetch the full week's data before opening the wizard,
   // because in day view allEvents/mealEvents only cover today.
-  _fetchWeekForWizard().then(({ weekEvents, weekMeals }) => {
-    openWizard(getCurrentMonday(), weekEvents, weekMeals);
+  _fetchWeekForWizard(getWizardMonday()).then(({ weekEvents, weekMeals }) => {
+    openWizard(getWizardMonday(), weekEvents, weekMeals);
   });
 }
 
-async function _fetchWeekForWizard() {
-  const monday = getCurrentMonday();
+function getWizardMonday() {
+  return startOfWeek(addDays(new Date(), (_wizardWeekOffset + weekOffset) * 7));
+}
+
+function onWizardNavigateWeek(delta) {
+  _wizardWeekOffset += delta;
+  const monday = getWizardMonday();
+  _fetchWeekForWizard(monday).then(({ weekEvents, weekMeals }) => {
+    openWizard(monday, weekEvents, weekMeals);
+  });
+}
+
+async function _fetchWeekForWizard(monday) {
   const sunday = addDays(monday, 6);
   sunday.setHours(23, 59, 59, 999);
 
