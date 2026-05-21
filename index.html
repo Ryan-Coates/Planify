@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="styles/week.css" />
   <link rel="stylesheet" href="styles/modal.css" />
   <link rel="stylesheet" href="styles/wizard.css" />
+  <link rel="stylesheet" href="styles/meals.css" />
   <link rel="stylesheet" href="styles/mobile.css" />
 </head>
 <body class="theme-light">
@@ -41,6 +42,7 @@
     <div class="toolbar-right">
       <button class="btn-icon" id="btn-theme" aria-label="Toggle theme" title="Toggle dark/light mode">☀</button>
       <button class="btn-plan-week" id="btn-plan-week" title="Plan this week day by day">✨ Plan Week</button>
+      <button class="btn-meals" id="btn-meal-library" title="Manage meal library">🍽 Meals</button>
       <button class="btn-icon" id="btn-settings" aria-label="Settings" title="Settings">⚙</button>
       <div id="auth-area">
         <button class="btn-primary" id="btn-signin">Sign in with Google</button>
@@ -346,19 +348,22 @@
     </div>
   </div>
 
-  <!-- Wizard inline meal picker (appears inside wizard) -->
-  <div class="modal-overlay hidden" id="wizard-meal-picker-overlay" role="dialog" aria-modal="true">
-    <div class="modal modal-sm">
+  <!-- Wizard smart meal picker -->
+  <div class="modal-overlay hidden" id="wizard-meal-picker-overlay" role="dialog" aria-modal="true" aria-label="Pick a meal">
+    <div class="modal meal-picker-modal">
       <div class="modal-header">
-        <h2 id="wizard-meal-picker-title">Add Breakfast</h2>
+        <h2 id="wizard-meal-picker-title">Pick a Dinner</h2>
         <button class="btn-icon" id="wizard-meal-picker-close">✕</button>
       </div>
-      <div class="modal-body">
-        <label class="field-label">Meal
-          <input type="text" id="wizard-meal-picker-input" class="field-input" placeholder="Type or pick from library…" autocomplete="off" />
-          <ul class="autocomplete-list hidden" id="wizard-meal-picker-ac"></ul>
-        </label>
-        <label class="field-label">Notes
+      <div class="meal-picker-body">
+        <input type="text" id="wizard-meal-picker-search" class="field-input meal-picker-search" placeholder="Search by name or tag…" autocomplete="off" />
+        <div class="meal-picker-tags" id="wizard-meal-picker-tags"></div>
+        <div class="meal-picker-grid" id="wizard-meal-picker-grid"></div>
+        <div class="meal-picker-custom-row">
+          <span class="meal-picker-custom-label">Or type a custom name</span>
+          <input type="text" id="wizard-meal-picker-input" class="field-input" placeholder="Custom meal name…" autocomplete="off" />
+        </div>
+        <label class="field-label meal-picker-notes-label">Notes
           <input type="text" id="wizard-meal-picker-notes" class="field-input" placeholder="Optional" />
         </label>
       </div>
@@ -369,6 +374,49 @@
         <div class="modal-footer-right">
           <button class="btn-text" id="wizard-meal-picker-cancel">Cancel</button>
           <button class="btn-primary" id="wizard-meal-picker-save">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meal Library Page -->
+  <div class="meal-manager-overlay hidden" id="meal-manager-overlay" role="dialog" aria-modal="true" aria-label="Meal Library">
+    <div class="meal-manager-panel">
+      <div class="meal-manager-header">
+        <h2>🍽 Meal Library</h2>
+        <div class="meal-manager-header-actions">
+          <button class="btn-primary btn-small" id="btn-meal-manager-add">+ Add Meal</button>
+          <button class="btn-icon" id="btn-close-meal-manager" aria-label="Close meal library">✕</button>
+        </div>
+      </div>
+      <div class="meal-manager-toolbar">
+        <input type="text" id="meal-manager-search" class="field-input meal-manager-search" placeholder="Search meals by name or tag…" autocomplete="off" />
+      </div>
+      <div class="meal-manager-filter-tags" id="meal-manager-filter-tags"></div>
+      <div class="meal-manager-grid" id="meal-manager-grid"></div>
+
+      <!-- Add / Edit form overlay -->
+      <div class="meal-form-overlay hidden" id="meal-form-overlay">
+        <div class="meal-form-panel">
+          <h3 id="meal-form-title">Add Meal</h3>
+          <label class="field-label">Name
+            <input type="text" id="meal-form-name" class="field-input" placeholder="e.g. Spaghetti Bolognese" />
+          </label>
+          <label class="field-label">Tags
+            <div class="chip-input-wrap" id="meal-form-tags-wrap">
+              <input type="text" id="meal-form-tag-input" class="chip-input" placeholder="Add tag, press Enter…" autocomplete="off" />
+            </div>
+          </label>
+          <label class="field-label">Notes
+            <input type="text" id="meal-form-notes" class="field-input" placeholder="Optional notes" />
+          </label>
+          <div class="meal-form-actions">
+            <button class="btn-danger btn-small hidden" id="btn-meal-form-delete">Delete</button>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-text" id="btn-meal-form-cancel">Cancel</button>
+              <button class="btn-primary" id="btn-meal-form-save">Save</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

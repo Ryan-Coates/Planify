@@ -107,9 +107,19 @@ export function initWizard({ onSaveMeal, onRemoveMeal, onSaveHousehold, onRemove
   document.getElementById('wizard-meal-picker-remove').addEventListener('click', removeMealPicker);
   pickerOverlay().addEventListener('click', (e) => { if (e.target === pickerOverlay()) closeMealPicker(); });
 
-  // Autocomplete in picker
-  document.getElementById('wizard-meal-picker-input').addEventListener('input', _updatePickerAc);
-  document.getElementById('wizard-meal-picker-input').addEventListener('keydown', _handlePickerAcKey);
+  // Smart picker — search + tag chips
+  document.getElementById('wizard-meal-picker-search').addEventListener('input', e => {
+    _renderPickerMeals(e.target.value.toLowerCase().trim(), _pickerActiveTags);
+  });
+  // Deselect card if user types a custom name
+  document.getElementById('wizard-meal-picker-input').addEventListener('input', () => {
+    if (document.getElementById('wizard-meal-picker-input').value.trim()) {
+      _pickerSelectedMeal = null;
+      document.getElementById('wizard-meal-picker-grid')
+        .querySelectorAll('.picker-meal-card.selected')
+        .forEach(c => c.classList.remove('selected'));
+    }
+  });
 
   // Day dot navigation
   document.getElementById('wizard-day-dots').addEventListener('click', (e) => {
@@ -527,44 +537,52 @@ async function _saveHouseholdItem(dayIdx, member, value) {
 
 // ---- Meal picker ----
 
-let _pickerSlot     = null;
-let _pickerExisting = null;
-let _pickerDayIdx   = null;  // day index when picker was opened
+let _pickerSlot         = null;
+let _pickerExisting     = null;
+let _pickerDayIdx       = null;  // day index when picker was opened
+let _pickerSelectedMeal = null;  // { name, notes } from clicked card, or null
+let _pickerActiveTags   = new Set();
 
 function openMealPicker(slot, existing = null) {
-  _pickerSlot     = slot;
-  _pickerExisting = existing;
-  _pickerDayIdx   = _currentDay;
+  _pickerSlot         = slot;
+  _pickerExisting     = existing;
+  _pickerDayIdx       = _currentDay;
+  _pickerActiveTags   = new Set();
+  _pickerSelectedMeal = existing ? { name: existing.name, notes: existing.notes || '' } : null;
 
   const slotLabel = slot.charAt(0).toUpperCase() + slot.slice(1);
-  const isEdit    = !!existing;
-
   document.getElementById('wizard-meal-picker-title').textContent =
-    isEdit ? `Edit ${slotLabel}` : `Add ${slotLabel}`;
-  document.getElementById('wizard-meal-picker-input').value  = existing?.name  || '';
-  document.getElementById('wizard-meal-picker-notes').value  = existing?.notes || '';
-  document.getElementById('wizard-meal-picker-ac').innerHTML = '';
-  document.getElementById('wizard-meal-picker-ac').classList.add('hidden');
+    existing ? `Edit ${slotLabel}` : `Pick a ${slotLabel}`;
 
-  // Show Remove button only when editing an already-saved meal
-  const removeBtn = document.getElementById('wizard-meal-picker-remove');
-  removeBtn.classList.toggle('hidden', !isEdit);
+  document.getElementById('wizard-meal-picker-search').value = '';
+  document.getElementById('wizard-meal-picker-input').value  = '';
+  document.getElementById('wizard-meal-picker-notes').value  = existing?.notes || '';
+
+  document.getElementById('wizard-meal-picker-remove')
+    .classList.toggle('hidden', !existing);
+
+  _renderPickerTagChips();
+  _renderPickerMeals('', _pickerActiveTags);
 
   pickerOverlay().classList.remove('hidden');
-  document.getElementById('wizard-meal-picker-input').focus();
+  document.getElementById('wizard-meal-picker-search').focus();
 }
 
 function closeMealPicker() {
   pickerOverlay().classList.add('hidden');
-  _pickerSlot     = null;
-  _pickerExisting = null;
-  _pickerDayIdx   = null;
+  _pickerSlot         = null;
+  _pickerExisting     = null;
+  _pickerDayIdx       = null;
+  _pickerSelectedMeal = null;
+  _pickerActiveTags   = new Set();
 }
 
 async function saveMealPicker() {
-  const name  = document.getElementById('wizard-meal-picker-input').value.trim();
+  const name  = _pickerSelectedMeal?.name ||
+                document.getElementById('wizard-meal-picker-input').value.trim();
   const notes = document.getElementById('wizard-meal-picker-notes').value.trim();
   if (!name) {
+    showToast('Select a meal card or type a custom name.', 'warn');
     document.getElementById('wizard-meal-picker-input').focus();
     return;
   }
@@ -632,46 +650,71 @@ async function removeMealPicker() {
   }
 }
 
-// ---- Autocomplete ----
+// ---- Smart picker rendering ----
 
-function _updatePickerAc() {
-  const query = document.getElementById('wizard-meal-picker-input').value.toLowerCase().trim();
-  const acList = document.getElementById('wizard-meal-picker-ac');
-
-  if (!query) { acList.classList.add('hidden'); return; }
-
-  const matches = getMeals().filter(m => m.name.toLowerCase().includes(query)).slice(0, 8);
-  if (!matches.length) { acList.classList.add('hidden'); return; }
-
-  acList.innerHTML = '';
-  matches.forEach((m, i) => {
-    const li = document.createElement('li');
-    li.dataset.index = i;
-    li.innerHTML = `${_esc(m.name)} <span class="autocomplete-slot">${m.slot}</span>`;
-    li.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      document.getElementById('wizard-meal-picker-input').value  = m.name;
-      document.getElementById('wizard-meal-picker-notes').value  = m.notes || '';
-      acList.classList.add('hidden');
+function _renderPickerTagChips() {
+  const container = document.getElementById('wizard-meal-picker-tags');
+  const allTags   = [...new Set(getMeals().flatMap(m => m.tags || []))].sort();
+  container.innerHTML = '';
+  allTags.forEach(tag => {
+    const chip = document.createElement('button');
+    chip.className = 'tag-chip' + (_pickerActiveTags.has(tag) ? ' active' : '');
+    chip.textContent = tag;
+    chip.addEventListener('click', () => {
+      if (_pickerActiveTags.has(tag)) _pickerActiveTags.delete(tag);
+      else _pickerActiveTags.add(tag);
+      chip.classList.toggle('active');
+      const search = document.getElementById('wizard-meal-picker-search').value.toLowerCase().trim();
+      _renderPickerMeals(search, _pickerActiveTags);
     });
-    acList.appendChild(li);
+    container.appendChild(chip);
   });
-  acList.classList.remove('hidden');
 }
 
-function _handlePickerAcKey(e) {
-  const acList = document.getElementById('wizard-meal-picker-ac');
-  const items  = acList.querySelectorAll('li');
-  const active = acList.querySelector('li.active');
+function _renderPickerMeals(search, activeTags) {
+  const grid  = document.getElementById('wizard-meal-picker-grid');
+  const meals = getMeals().filter(meal => {
+    const tags = meal.tags || [];
+    if (activeTags.size > 0 && !tags.some(t => activeTags.has(t))) return false;
+    if (search) {
+      const nameMatch = meal.name.toLowerCase().includes(search);
+      const tagMatch  = tags.some(t => t.includes(search));
+      if (!nameMatch && !tagMatch) return false;
+    }
+    return true;
+  });
 
-  if (e.key === 'Escape')    { acList.classList.add('hidden'); return; }
-  if (e.key === 'ArrowDown') { e.preventDefault(); const n = active ? active.nextElementSibling : items[0]; if(n){active?.classList.remove('active'); n.classList.add('active');} return; }
-  if (e.key === 'ArrowUp')   { e.preventDefault(); const p = active ? active.previousElementSibling : items[items.length-1]; if(p){active?.classList.remove('active'); p.classList.add('active');} return; }
-  if (e.key === 'Enter' && active) {
-    e.preventDefault();
-    document.getElementById('wizard-meal-picker-input').value = active.firstChild.textContent.trim();
-    acList.classList.add('hidden');
+  grid.innerHTML = '';
+
+  if (!meals.length) {
+    const empty = document.createElement('p');
+    empty.className = 'picker-empty';
+    empty.textContent = 'No meals match — use the custom name field below.';
+    grid.appendChild(empty);
+    return;
   }
+
+  meals.forEach(meal => {
+    const card = document.createElement('div');
+    card.className = 'picker-meal-card' +
+      (_pickerSelectedMeal?.name === meal.name ? ' selected' : '');
+    const tagsHtml = (meal.tags || [])
+      .map(t => `<span class="tag-chip-sm">${_esc(t)}</span>`)
+      .join('');
+    card.innerHTML = `
+      <div class="picker-meal-name">${_esc(meal.name)}</div>
+      ${tagsHtml ? `<div class="picker-meal-tags">${tagsHtml}</div>` : ''}
+    `;
+    card.addEventListener('click', () => {
+      _pickerSelectedMeal = { name: meal.name, notes: meal.notes || '' };
+      document.getElementById('wizard-meal-picker-input').value = '';
+      document.getElementById('wizard-meal-picker-notes').value = meal.notes || '';
+      grid.querySelectorAll('.picker-meal-card.selected')
+        .forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+    });
+    grid.appendChild(card);
+  });
 }
 
 // ---- Helpers ----

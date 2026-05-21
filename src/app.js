@@ -9,6 +9,7 @@ import { initEventModal, openNewEventModal, openEditEventModal } from './eventMo
 import { initMealPlanner, openNewMealModal, openEditMealModal, listMealEvents, resetMealCalendarId, _getMealCalendarId } from './mealPlanner.js';
 import { initSettings, openSettings } from './settings.js';
 import { loadLibrary } from './mealLibrary.js';
+import { initMealManager, openMealManager } from './mealManager.js';
 import { initWizard, openWizard } from './weekWizard.js';
 import { startOfWeek, addDays, toDateString, showToast } from './utils.js';
 import { createEvent, updateEvent, deleteEvent } from './calendar.js';
@@ -56,6 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initMealPlanner(onMealSaved);
   initSettings(onCalendarVisibilityChanged);
 
+  // Meal library page
+  initMealManager();
+
   // Wizard
   initWizard({
     onSaveMeal:        onWizardSaveMeal,
@@ -69,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Toolbar buttons
   document.getElementById('btn-plan-week').addEventListener('click', onPlanWeekClick);
+  document.getElementById('btn-meal-library').addEventListener('click', openMealManager);
   document.getElementById('btn-view-day').addEventListener('click', () => switchView('day'));
   document.getElementById('btn-view-week').addEventListener('click', () => switchView('week'));
   document.getElementById('btn-prev-week').addEventListener('click', () => navigatePrev());
