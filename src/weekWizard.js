@@ -490,6 +490,18 @@ function _syncToAllEvents(existing, saved) {
 }
 
 /**
+ * Scan _allEvents for any calendar event already tied to this household member
+ * on the given date.  Used as a fallback when _dayPeople pre-population missed
+ * the event (e.g. on a fresh wizard open after a prior session).
+ */
+function _findExistingHouseholdEvent(date, memberKey) {
+  return _allEvents.find(ev => {
+    const d = ev.start?.date || ev.start?.dateTime?.slice(0, 10);
+    return d === date && ev.extendedProperties?.private?.planify_household === memberKey;
+  }) || null;
+}
+
+/**
  * Save (create/update/delete) a household calendar event.
  * Throws on API failure.
  */
@@ -499,7 +511,9 @@ async function _saveHouseholdItem(dayIdx, member, value) {
   if (!value || value === false) {
     // Remove only for the specific day
     if (!_dayPeople[dayIdx]) _dayPeople[dayIdx] = {};
-    const existing = _dayPeople[dayIdx][member.key]?._event || null;
+    const date     = toDateString(addDays(_monday, dayIdx));
+    const existing = _dayPeople[dayIdx][member.key]?._event
+                  || _findExistingHouseholdEvent(date, member.key);
     if (existing && _onRemoveHousehold) {
       await _onRemoveHousehold(existing);
       const i = _allEvents.indexOf(existing);
@@ -514,7 +528,8 @@ async function _saveHouseholdItem(dayIdx, member, value) {
     for (let i = 0; i < 7; i++) {
       if (!_dayPeople[i]) _dayPeople[i] = {};
       const date      = toDateString(addDays(_monday, i));
-      const existing  = _dayPeople[i][member.key]?._event || null;
+      const existing  = _dayPeople[i][member.key]?._event
+                     || _findExistingHouseholdEvent(date, member.key);
       const eventBody = _buildHouseholdEventBody(member, date, value);
       if (!eventBody) continue;
       const saved = await _onSaveHousehold(date, member.key, eventBody, existing);
@@ -527,7 +542,8 @@ async function _saveHouseholdItem(dayIdx, member, value) {
   // Single-day save
   if (!_dayPeople[dayIdx]) _dayPeople[dayIdx] = {};
   const date      = toDateString(addDays(_monday, dayIdx));
-  const existing  = _dayPeople[dayIdx][member.key]?._event || null;
+  const existing  = _dayPeople[dayIdx][member.key]?._event
+                 || _findExistingHouseholdEvent(date, member.key);
   const eventBody = _buildHouseholdEventBody(member, date, value);
   if (!eventBody) return;
   const saved = await _onSaveHousehold(date, member.key, eventBody, existing);
